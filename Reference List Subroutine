@@ -1,3 +1,7 @@
+'TAG:MSWord2013
+'TAG:MSOffice2013
+'TAG:Author=Unknown
+
 Option Explicit
  
 Private Const HKEY_CLASSES_ROOT As Long = &H80000000
