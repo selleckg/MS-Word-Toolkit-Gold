@@ -1,0 +1,100 @@
+Option Explicit
+ 
+Private Const HKEY_CLASSES_ROOT As Long = &H80000000
+Private Const READ_CONTROL As Long = &H20000
+Private Const STANDARD_RIGHTS_READ As Long = (READ_CONTROL)
+Private Const KEY_QUERY_VALUE As Long = &H1
+Private Const KEY_ENUMERATE_SUB_KEYS As Long = &H8
+Private Const KEY_NOTIFY As Long = &H10
+Private Const SYNCHRONIZE As Long = &H100000
+Private Const KEY_READ As Long = (( _
+                  STANDARD_RIGHTS_READ _
+               Or KEY_QUERY_VALUE _
+               Or KEY_ENUMERATE_SUB_KEYS _
+               Or KEY_NOTIFY) _
+               And (Not SYNCHRONIZE))
+Private Const ERROR_SUCCESS As Long = 0&
+Private Const ERROR_NO_MORE_ITEMS As Long = 259&
+ 
+Private Declare Function RegOpenKeyEx _
+   Lib "advapi32.dll" Alias "RegOpenKeyExA" ( _
+        ByVal hKey As Long, _
+        ByVal lpSubKey As String, _
+        ByVal ulOptions As Long, _
+        ByVal samDesired As Long, _
+        ByRef phkResult As Long) As Long
+ 
+Private Declare Function RegEnumKey _
+   Lib "advapi32.dll" Alias "RegEnumKeyA" ( _
+        ByVal hKey As Long, _
+        ByVal dwIndex As Long, _
+        ByVal lpName As String, _
+        ByVal cbName As Long) As Long
+ 
+Private Declare Function RegQueryValue _
+   Lib "advapi32.dll" Alias "RegQueryValueA" ( _
+        ByVal hKey As Long, _
+        ByVal lpSubKey As String, _
+        ByVal lpValue As String, _
+        ByRef lpcbValue As Long) As Long
+ 
+Private Declare Function RegCloseKey _
+   Lib "advapi32.dll" ( _
+        ByVal hKey As Long) As Long
+ 
+Private Sub RefList()
+Dim R1 As Long
+Dim R2 As Long
+Dim hHK1 As Long
+Dim hHK2 As Long
+Dim hHK3 As Long
+Dim hHK4 As Long
+Dim i As Long
+Dim i2 As Long
+Dim lpPath As String
+Dim lpGUID As String
+Dim lpName As String
+Dim lpValue As String
+    Cells.Clear
+    lpPath = String$(128, vbNullChar)
+   lpValue = String$(128, vbNullChar)
+   lpName = String$(128, vbNullChar)
+   lpGUID = String$(128, vbNullChar)
+    R1 = RegOpenKeyEx(HKEY_CLASSES_ROOT, "TypeLib", ByVal 0&, KEY_READ,
+hHK1)
+   If R1 = ERROR_SUCCESS Then
+       i = 0
+       Do While Not R1 = ERROR_NO_MORE_ITEMS
+           R1 = RegEnumKey(hHK1, i, lpGUID, Len(lpGUID))
+           If R1 = ERROR_SUCCESS Then
+               R2 = RegOpenKeyEx(hHK1, lpGUID, ByVal 0&, KEY_READ, hHK2)
+               If R2 = ERROR_SUCCESS Then
+                   i2 = 0
+                   Do While Not R2 = ERROR_NO_MORE_ITEMS
+                       R2 = RegEnumKey(hHK2, i2, lpName, Len(lpName)) '1.0
+                       If R2 = ERROR_SUCCESS Then
+                           RegQueryValue hHK2, lpName, lpValue,
+Len(lpValue)
+                           RegOpenKeyEx hHK2, lpName, ByVal 0&, KEY_READ,
+hHK3
+                           RegOpenKeyEx hHK3, "0", ByVal 0&, KEY_READ, hHK4
+                           RegQueryValue hHK4, "win32", lpPath, Len(lpPath)
+                           i2 = i2 + 1
+                            Cells(i + 1, 1) = lpGUID
+                           Cells(i + 1, 2) = lpValue
+                           Cells(i + 1, 3) = lpPath
+                       End If
+                   Loop
+               End If
+           End If
+           i = i + 1
+       Loop
+       RegCloseKey hHK1
+       RegCloseKey hHK2
+       RegCloseKey hHK3
+       RegCloseKey hHK4
+   End If
+   Columns("A:A").EntireColumn.AutoFit
+   Columns("B:C").ColumnWidth = 70
+   Range("A1").CurrentRegion.Sort Key1:=Range("B1")
+End Sub
